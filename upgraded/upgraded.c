@@ -43,10 +43,10 @@ static void upgrade_proc_cb(struct uloop_process *proc, int ret)
 
 static void sysupgrade(char *path, char *command)
 {
-	char *args[] = { "/lib/upgrade/stage2", NULL, NULL, NULL };
+	char *args[] = { "/sbin/sysupgrade", "nand", NULL, NULL, NULL };
 
-	args[1] = path;
-	args[2] = command;
+	args[2] = path;
+	args[3] = command;
 	upgrade_proc.cb = upgrade_proc_cb;
 	upgrade_proc.pid = fork();
 	if (!upgrade_proc.pid) {
@@ -83,14 +83,14 @@ int main(int argc, char **argv)
 	}
 	close(fd);
 
-	if (argc != 3) {
+	if (argc != 2 && argc != 3) {
 		fprintf(stderr, "sysupgrade stage 2 failed, invalid command line\n");
 		return -1;
 	}
 
 	uloop_init();
 	watchdog_init(0);
-	sysupgrade(argv[1], argv[2]);
+	sysupgrade(argv[1], (argc == 3) ? argv[2] : NULL);
 	uloop_run();
 
 	reboot(RB_AUTOBOOT);
