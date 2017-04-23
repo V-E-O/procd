@@ -41,12 +41,11 @@ static void upgrade_proc_cb(struct uloop_process *proc, int ret)
 	uloop_end();
 }
 
-static void sysupgrade(char *path, char *command)
+static void sysupgrade(char *folder)
 {
-	char *args[] = { "/sbin/sysupgrade", "nand", NULL, NULL, NULL };
+	char *args[] = { "/sbin/sysupgrade", "nand", NULL, NULL };
 
-	args[2] = path;
-	args[3] = command;
+	args[2] = folder;
 	upgrade_proc.cb = upgrade_proc_cb;
 	upgrade_proc.pid = fork();
 	if (!upgrade_proc.pid) {
@@ -83,14 +82,14 @@ int main(int argc, char **argv)
 	}
 	close(fd);
 
-	if (argc != 2 && argc != 3) {
-		fprintf(stderr, "sysupgrade stage 2 failed, invalid command line\n");
+	if (argc != 2) {
+		fprintf(stderr, "sysupgrade stage 2 failed, no folder specified\n");
 		return -1;
 	}
 
 	uloop_init();
 	watchdog_init(0);
-	sysupgrade(argv[1], (argc == 3) ? argv[2] : NULL);
+	sysupgrade(argv[1]);
 	uloop_run();
 
 	reboot(RB_AUTOBOOT);
