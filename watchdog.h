@@ -24,7 +24,7 @@ void watchdog_set_magicclose(bool val);
 bool watchdog_get_magicclose(void);
 void watchdog_set_stopped(bool val);
 bool watchdog_get_stopped(void);
-void watchdog_set_cloexec(bool val);
+void watchdog_no_cloexec(void);
 void watchdog_ping(void);
 #else
 static inline void watchdog_init(int preinit)
@@ -63,7 +63,7 @@ static inline bool watchdog_get_stopped(void)
 	return true;
 }
 
-static inline void watchdog_set_cloexec(bool val)
+static inline void watchdog_no_cloexec(void)
 {
 }
 
