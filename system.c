@@ -28,7 +28,6 @@
 #include <libubox/uloop.h>
 
 #include "procd.h"
-#include "sysupgrade.h"
 #include "watchdog.h"
 
 static struct blob_buf b;
@@ -387,6 +386,34 @@ static const struct blobmsg_policy sysupgrade_policy[__SYSUPGRADE_MAX] = {
 	[SYSUPGRADE_COMMAND] = { .name = "command", .type = BLOBMSG_TYPE_STRING },
 };
 
+static void
+procd_exec_upgraded(const char *prefix, char *path, char *command)
+{
+	char *wdt_fd = watchdog_fd();
+	char *argv[] = { "/sbin/upgraded", NULL, NULL, NULL};
+
+	if (chroot(prefix)) {
+		fprintf(stderr, "Failed to chroot for upgraded exec.\n");
+		return;
+	}
+
+	argv[1] = path;
+	argv[2] = command;
+
+	DEBUG(2, "Exec to upgraded now\n");
+	if (wdt_fd) {
+		watchdog_set_cloexec(false);
+		setenv("WDTFD", wdt_fd, 1);
+	}
+	execvp(argv[0], argv);
+
+	/* Cleanup on failure */
+	fprintf(stderr, "Failed to exec upgraded.\n");
+	unsetenv("WDTFD");
+	watchdog_set_cloexec(true);
+	chroot(".");
+}
+
 static int sysupgrade(struct ubus_context *ctx, struct ubus_object *obj,
 		      struct ubus_request_data *req, const char *method,
 		      struct blob_attr *msg)
@@ -400,9 +427,9 @@ static int sysupgrade(struct ubus_context *ctx, struct ubus_object *obj,
 	if (!tb[SYSUPGRADE_PATH] || !tb[SYSUPGRADE_PREFIX])
 		return UBUS_STATUS_INVALID_ARGUMENT;
 
-	sysupgrade_exec_upgraded(blobmsg_get_string(tb[SYSUPGRADE_PREFIX]),
-				 blobmsg_get_string(tb[SYSUPGRADE_PATH]),
-				 tb[SYSUPGRADE_COMMAND] ? blobmsg_get_string(tb[SYSUPGRADE_COMMAND]) : NULL);
+	procd_exec_upgraded(blobmsg_get_string(tb[SYSUPGRADE_PREFIX]),
+			    blobmsg_get_string(tb[SYSUPGRADE_PATH]),
+			    tb[SYSUPGRADE_COMMAND] ? blobmsg_get_string(tb[SYSUPGRADE_COMMAND]) : NULL);
 	return 0;
 }
 
